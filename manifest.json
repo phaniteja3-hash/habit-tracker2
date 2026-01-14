@@ -1,0 +1,11 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Habit tracker",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Tracker",
+  "start_url": "/",
+  "theme_color": "#ffffff"
+}

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habit & Task Tracker</title>
+<style>
+body{
+  font-family:Arial,sans-serif;
+  background:#f4f6f8;
+  margin:0;
+  padding:12px;
+}
+header{
+  text-align:center;
+  font-size:22px;
+  font-weight:bold;
+  margin-bottom:12px;
+}
+section{
+  background:#fff;
+  border-radius:12px;
+  padding:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.1);
+  margin-bottom:12px;
+}
+h2{margin:6px 0 12px;}
+button{
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  background:#4caf50;
+  color:#fff;
+  cursor:pointer;
+}
+button.secondary{background:#2196f3;}
+button.danger{background:#f44336;}
+input[type=text], input[type=date], textarea{
+  width:100%;
+  padding:8px;
+  margin:6px 0;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:14px;
+}
+textarea{resize:none;height:60px;}
+.controls{display:flex;gap:4px;}
+.progress-bar{
+  background:#ddd;
+  border-radius:10px;
+  overflow:hidden;
+  height:20px;
+  margin-top:8px;
+}
+.progress-fill{
+  background:#4caf50;
+  height:100%;
+  width:0%;
+  text-align:center;
+  color:#fff;
+  font-weight:bold;
+  transition:width .3s;
+}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+table th, table td{border:1px solid #ccc;padding:6px 8px;text-align:left;font-size:14px;}
+th{background:#eee;}
+.pending-count{color:#f44336;font-weight:bold;margin-top:6px;}
+.popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:10;
+}
+.popup-content{
+  background:#fff;
+  padding:16px;
+  border-radius:10px;
+  width:90%;
+  max-width:400px;
+  text-align:center;
+}
+</style>
+</head>
+<body>
+
+<header>
+📅 Tracker
+<div style="margin-top:8px;">
+  <button class="secondary" onclick="changeDate(-1)">◀</button>
+  <input type="date" id="datePicker">
+  <button class="secondary" onclick="changeDate(1)">▶</button>
+</div>
+</header>
+
+<!-- ===== HABITS ===== -->
+<section>
+<h2>✅ Habits</h2>
+<div style="display:flex;gap:8px;margin-bottom:10px;">
+  <button class="secondary" onclick="undo()">↩ Undo</button>
+  <button class="danger" onclick="resetToday()">🔄 Reset Today</button>
+</div>
+<div id="habitList"></div>
+<input id="newHabit" placeholder="Add new habit">
+<button onclick="addHabit()">Add Habit</button>
+<p style="margin-top:10px;">Today Score</p>
+<div class="progress-bar">
+  <div class="progress-fill" id="progress">0%</div>
+</div>
+</section>
+
+<!-- ===== TASKS ===== -->
+<section>
+<h2>📝 Tasks</h2>
+<input id="taskName" placeholder="Task name">
+<textarea id="taskNotes" placeholder="Notes (optional)"></textarea>
+<input type="date" id="taskDueDateInput" style="position:absolute;left:-9999px;">
+<button class="secondary" id="dueDateBtn">📅 Select Due Date</button>
+<p id="dueDateLabel">No date selected</p>
+<button onclick="addTask()">➕ Add Task</button>
+<p class="pending-count" id="pendingCount">Pending Tasks: 0</p>
+<table id="taskTable">
+<thead>
+<tr>
+  <th>Done</th><th>Task Name</th><th>Due Date</th><th>Notes</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</section>
+
+<!-- ===== COMPLETED TASKS ===== -->
+<section>
+<h2>📊 Completed Tasks</h2>
+<h3>✅ On Time</h3>
+<table id="onTimeTasks">
+<tr><th>Task</th><th>Due</th><th>Completed</th><th>Days Remaining</th></tr>
+</table>
+<h3>⏰ Delayed</h3>
+<table id="delayedTasks">
+<tr><th>Task</th><th>Due</th><th>Completed</th><th>Days Delayed</th></tr>
+</table>
+</section>
+
+<!-- ===== HABIT HISTORY ===== -->
+<section>
+<h2>📈 Habit History</h2>
+<table id="habitHistoryTable">
+<tr><th>Date</th><th>Score</th><th>Details</th></tr>
+</table>
+</section>
+
+<!-- ===== HABIT SUMMARY / BLOCK 4 ===== -->
+<section>
+<h2>📋 Habit Summary</h2>
+<table id="habitSummaryTable" style="border:none; width:100%;">
+<tr>
+  <th style="border:none; text-align:left;">Habit</th>
+  <th style="border:none;">✅ Success</th>
+  <th style="border:none;">❌ Failed</th>
+</tr>
+</table>
+</section>
+
+<!-- ===== POPUPS ===== -->
+<div class="popup" id="popup">
+  <div class="popup-content">
+    <p id="popupText"></p>
+    <button onclick="closePopup()">OK</button>
+  </div>
+</div>
+
+<div class="popup" id="habitPopup">
+  <div class="popup-content">
+    <h3>Habit Details</h3>
+    <table id="habitPopupTable">
+      <tr><th>Habit</th><th>Status</th></tr>
+    </table>
+    <br>
+    <button onclick="closeHabitPopup()">Close</button>
+  </div>
+</div>
+
+<div class="popup" id="notesPopup">
+  <div class="popup-content">
+    <p id="notesText"></p>
+    <button onclick="closeNotesPopup()">Close</button>
+  </div>
+</div>
+
+<script>
+/* ===== DATE ===== */
+let today = new Date().toISOString().slice(0,10);
+const datePicker = document.getElementById("datePicker");
+datePicker.value = today;
+datePicker.onchange = e=>{ today=e.target.value; render(); }
+function changeDate(step){ const d=new Date(today); d.setDate(d.getDate()+step); today=d.toISOString().slice(0,10); datePicker.value=today; render(); }
+
+/* ===== HABITS ===== */
+let habits = JSON.parse(localStorage.getItem("habits")||"[]");
+habits.forEach(h=>h.history ||= {});
+let undoStack=[];
+function saveHabits(){ localStorage.setItem("habits",JSON.stringify(habits)); }
+function popup(msg){ document.getElementById("popupText").textContent=msg; document.getElementById("popup").style.display="flex"; }
+function closePopup(){ document.getElementById("popup").style.display="none"; }
+
+function addHabit(){
+  const name=newHabit.value.trim();
+  if(!name) return;
+  undoStack.push(JSON.stringify(habits));
+  habits.push({name,history:{}});
+  newHabit.value="";
+  saveHabits(); render(); renderHabitSummary(); renderHabitHistory();
+}
+
+function undo(){ if(undoStack.length){ habits=JSON.parse(undoStack.pop()); saveHabits(); render(); renderHabitSummary(); renderHabitHistory(); } }
+function resetToday(){ if(confirm("Reset all habits for today?")){ undoStack.push(JSON.stringify(habits)); habits.forEach(h=>delete h.history[today]); saveHabits(); render(); renderHabitSummary(); renderHabitHistory(); } }
+
+function render(){
+  const list=document.getElementById("habitList"); list.innerHTML="";
+  let done=0;
+  habits.forEach((h,i)=>{
+    const status=h.history[today]||"fail";
+    if(status==="done") done++;
+    const row=document.createElement("div"); row.style.display="flex"; row.style.alignItems="center"; row.style.gap="8px"; row.style.marginBottom="6px";
+    const doneCb=document.createElement("input"); doneCb.type="checkbox"; doneCb.checked=status==="done";
+    doneCb.onchange=()=>{ if(confirm(`Mark "${h.name}" as DONE?`)){ undoStack.push(JSON.stringify(habits)); h.history[today]="done"; saveHabits(); render(); renderHabitSummary(); renderHabitHistory(); popup(`${h.name} ✔ Done`);} else doneCb.checked=false; }
+    const failCb=document.createElement("input"); failCb.type="checkbox"; failCb.checked=status==="fail";
+    failCb.onchange=()=>{ if(confirm(`Mark "${h.name}" as NOT DONE?`)){ undoStack.push(JSON.stringify(habits)); h.history[today]="fail"; saveHabits(); render(); renderHabitSummary(); renderHabitHistory(); popup(`${h.name} ❌ Not Done`);} else failCb.checked=false;}
+    const span=document.createElement("span"); span.textContent=h.name; span.style.flex="1";
+    const ctr=document.createElement("div"); ctr.className="controls";
+    const up=document.createElement("button"); up.textContent="⬆"; up.onclick=()=>{ if(i>0){ [habits[i-1],habits[i]]=[habits[i],habits[i-1]]; saveHabits(); render(); renderHabitSummary(); renderHabitHistory(); } }
+    const down=document.createElement("button"); down.textContent="⬇"; down.onclick=()=>{ if(i<habits.length-1){ [habits[i+1],habits[i]]=[habits[i],habits[i+1]]; saveHabits(); render(); renderHabitSummary(); renderHabitHistory(); } }
+    const del=document.createElement("button"); del.textContent="🗑"; del.className="danger"; del.onclick=()=>{ if(confirm(`Delete "${h.name}"?`)){ undoStack.push(JSON.stringify(habits)); habits.splice(i,1); saveHabits(); render(); renderHabitSummary(); renderHabitHistory(); } }
+    ctr.append(up,down,del);
+    row.append(doneCb,failCb,span,ctr);
+    list.appendChild(row);
+  });
+  const percent=habits.length?Math.round(done/habits.length*100):0;
+  const bar=document.getElementById("progress"); bar.style.width=percent+"%"; bar.textContent=percent+"%";
+}
+
+/* ===== TASKS ===== */
+let tasks=JSON.parse(localStorage.getItem("tasks")||"[]"); let selectedDate="";
+const dueDateBtn=document.getElementById('dueDateBtn');
+const taskDueDateInput=document.getElementById('taskDueDateInput');
+const dueDateLabel=document.getElementById('dueDateLabel');
+dueDateBtn.onclick=()=>taskDueDateInput.click();
+taskDueDateInput.onchange=()=>{ selectedDate=taskDueDateInput.value; const [y,m,d]=selectedDate.split('-'); dueDateLabel.textContent="Due: "+`${d}-${m}-${y}`;}
+function addTask(){ const name=taskName.value.trim(); if(!name||!selectedDate){ alert("Task name & due date required"); return;}
+tasks.push({name,notes:taskNotes.value.trim(),due:selectedDate,completed:false});
+localStorage.setItem('tasks',JSON.stringify(tasks));
+taskName.value=''; taskNotes.value=''; selectedDate=''; dueDateLabel.textContent="No date selected"; renderTasks(); renderCompletedTasks(); }
+function renderTasks(){ const tbody=document.querySelector('#taskTable tbody'); tbody.innerHTML=''; tasks.sort((a,b)=> new Date(a.due)-new Date(b.due)); let pending=0; tasks.forEach((t,i)=>{ if(!t.completed){ pending++; const row=document.createElement('tr'); const tdCheck=document.createElement('td'); const cb=document.createElement('input'); cb.type='checkbox'; cb.onclick=()=>{ if(confirm(`Complete "${t.name}"?`)){ t.completed=true; localStorage.setItem('tasks',JSON.stringify(tasks)); renderTasks(); renderCompletedTasks(); } else cb.checked=false; }; tdCheck.appendChild(cb); const tdName=document.createElement('td'); tdName.textContent=t.name; const tdDue=document.createElement('td'); const [y,m,d]=t.due.split('-'); tdDue.textContent=`${d}-${m}-${y}`; const tdNotes=document.createElement('td'); const noteBtn=document.createElement('button'); noteBtn.textContent='View'; noteBtn.className='small secondary'; noteBtn.onclick=()=>{ notesText.textContent=t.notes||"No notes"; notesPopup.style.display='flex';}; tdNotes.appendChild(noteBtn); row.append(tdCheck,tdName,tdDue,tdNotes); tbody.appendChild(row); } }); document.getElementById('pendingCount').textContent=`Pending Tasks: ${pending}`; }
+
+function renderCompletedTasks(){
+  const onTime=document.getElementById('onTimeTasks');
+  const delayed=document.getElementById('delayedTasks');
+  onTime.innerHTML='<tr><th>Task</th><th>Due</th><th>Completed</th><th>Days Remaining</th></tr>';
+  delayed.innerHTML='<tr><th>Task</th><th>Due</th><th>Completed</th><th>Days Delayed</th></tr>';
+  tasks.forEach(t=>{ if(!t.completed) return; const due=new Date(t.due); const done=new Date(t.completedDate||today); const diff=Math.ceil((due-done)/(1000*60*60*24)); const row=document.createElement('tr'); row.innerHTML=`<td>${t.name}</td><td>${t.due}</td><td>${t.completedDate||today}</td><td>${Math.abs(diff)}</td>`; diff>=0 ? onTime.appendChild(row) : delayed.appendChild(row); });
+}
+
+/* ===== HABIT HISTORY ===== */
+function renderHabitHistory(){
+  const table=document.getElementById('habitHistoryTable'); table.innerHTML='<tr><th>Date</th><th>Score</th><th>Details</th></tr>';
+  const dates=new Set(); habits.forEach(h=>Object.keys(h.history).forEach(d=>dates.add(d)));
+  [...dates].sort().forEach(date=>{ let done=0; habits.forEach(h=>{ if(h.history[date]==='done') done++; }); const row=document.createElement('tr'); row.innerHTML=`<td>${date}</td><td><b>${done} / ${habits.length}</b></td><td><button onclick="showHabitDetails('${date}')">View</button></td>`; table.appendChild(row); });
+}
+function showHabitDetails(date){
+  const table=document.getElementById('habitPopupTable'); table.innerHTML='<tr><th>Habit</th><th>Status</th></tr>';
+  habits.forEach(h=>{ const done=h.history[date]==='done'; const tr=document.createElement('tr'); tr.innerHTML=`<td>${h.name}</td><td style="color:${done?'green':'red'}">${done?'✔ Done':'❌ Not Done'}</td>`; table.appendChild(tr); });
+  document.getElementById('habitPopup').style.display='flex';
+}
+function closeHabitPopup(){ document.getElementById('habitPopup').style.display='none'; }
+function closeNotesPopup(){ document.getElementById('notesPopup').style.display='none'; }
+
+/* ===== HABIT SUMMARY / BLOCK 4 ===== */
+function renderHabitSummary(){
+  const table = document.getElementById('habitSummaryTable');
+  table.innerHTML = '<tr><th style="border:none; text-align:left;">Habit</th><th style="border:none;">✅ Success</th><th style="border:none;">❌ Failed</th></tr>';
+  habits.forEach(h => {
+    let doneCount = 0, failCount = 0;
+    for (let d in h.history){
+      if(h.history[d] === 'done') doneCount++;
+      else if(h.history[d] === 'fail') failCount++;
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="border:none; text-align:left;">${h.name}</td><td style="border:none; text-align:center;">${doneCount}</td><td style="border:none; text-align:center;">${failCount}</td>`;
+    table.appendChild(tr);
+  });
+}
+
+/* ===== INIT ===== */
+render(); renderTasks(); renderCompletedTasks(); renderHabitHistory(); renderHabitSummary();
+</script>
+
+</body>
+</html>
